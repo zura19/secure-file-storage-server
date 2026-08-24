@@ -84,8 +84,14 @@ export async function deleteFromCloudinary(
   mimeType?: string,
 ) {
   let resourceType: "image" | "video" | "raw" = "raw";
-  if (mimeType?.startsWith("image/")) resourceType = "image";
-  if (mimeType?.startsWith("video/") || mimeType?.startsWith("audio/")) resourceType = "video";
+  if (mimeType?.startsWith("image/") || mimeType === "application/pdf") {
+    resourceType = "image";
+  } else if (
+    mimeType?.startsWith("video/") ||
+    mimeType?.startsWith("audio/")
+  ) {
+    resourceType = "video";
+  }
 
   return cloudinary.uploader.destroy(publicId, {
     resource_type: resourceType,

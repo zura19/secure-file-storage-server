@@ -71,7 +71,7 @@ export function uploadStreamToCloudinary(
       });
     }
 
-    fileStream.on("error", (streamError) => {
+    fileStream.on("error", (streamError: Error | unknown) => {
       reject(streamError);
     });
 

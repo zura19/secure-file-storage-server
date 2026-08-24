@@ -7,7 +7,7 @@
     "dev": "tsx watch src/index.ts",
     "build": "prisma generate && tsc",
     "start": "node dist/index.js",
-    "render:build": "npm install && prisma generate && prisma migrate deploy && tsc",
+    "render:build": "npm install --include=dev && prisma generate && prisma migrate deploy && tsc",
     "render:start": "node dist/index.js",
     "postinstall": "prisma generate",
     "typecheck": "tsc --noEmit",
@@ -21,6 +21,12 @@
   "license": "ISC",
   "dependencies": {
     "@prisma/client": "^6.19.3",
+    "@types/cookie-parser": "^1.4.10",
+    "@types/cors": "^2.8.17",
+    "@types/express": "^5.0.0",
+    "@types/jsonwebtoken": "^9.0.10",
+    "@types/multer": "^2.2.0",
+    "@types/node": "^22.13.4",
     "argon2": "^0.45.1",
     "cloudinary": "^2.10.1",
     "cookie-parser": "^1.4.7",
@@ -28,17 +34,11 @@
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
     "jsonwebtoken": "^9.0.3",
-    "multer": "^2.2.0"
+    "multer": "^2.2.0",
+    "prisma": "^6.19.3",
+    "typescript": "^5.7.3"
   },
   "devDependencies": {
-    "@types/cookie-parser": "^1.4.10",
-    "@types/cors": "^2.8.17",
-    "@types/express": "^5.0.0",
-    "@types/jsonwebtoken": "^9.0.10",
-    "@types/multer": "^2.2.0",
-    "@types/node": "^22.13.4",
-    "prisma": "^6.19.3",
-    "tsx": "^4.19.3",
-    "typescript": "^5.7.3"
+    "tsx": "^4.19.3"
   }
 }

@@ -5,6 +5,7 @@ interface ErrorWithStatus extends Error {
   status?: number;
   statusText?: "fail" | "error";
   isOperational?: boolean;
+  code?: string;
 }
 
 export const globalErrorHandler = (

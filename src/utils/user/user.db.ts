@@ -1,7 +1,14 @@
 import prisma from "../../lib/prisma.js";
-import { Prisma, User } from "@prisma/client";
+import { Prisma, User, Visibility } from "@prisma/client";
 
 export type SafeUser = Omit<User, "passwordHash">;
+
+export interface UserStats {
+  totalFiles: number;
+  totalSizeBytes: number;
+  totalSharedFiles: number;
+  totalPrivateFiles: number;
+}
 
 export const userSafeSelect = {
   id: true,
@@ -46,3 +53,38 @@ export async function createUser(data: {
     select: userSafeSelect,
   });
 }
+
+export async function getUserFileStats(userId: string): Promise<UserStats> {
+  const [totalFiles, sizeAggregate, totalSharedFiles, totalPrivateFiles] =
+    await Promise.all([
+      prisma.file.count({
+        where: { ownerId: userId },
+      }),
+      prisma.file.aggregate({
+        where: { ownerId: userId },
+        _sum: {
+          size: true,
+        },
+      }),
+      prisma.file.count({
+        where: {
+          ownerId: userId,
+          visibility: Visibility.PUBLIC,
+        },
+      }),
+      prisma.file.count({
+        where: {
+          ownerId: userId,
+          visibility: Visibility.PRIVATE,
+        },
+      }),
+    ]);
+
+  return {
+    totalFiles,
+    totalSizeBytes: sizeAggregate._sum.size ?? 0,
+    totalSharedFiles,
+    totalPrivateFiles,
+  };
+}
+

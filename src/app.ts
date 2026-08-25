@@ -3,6 +3,7 @@ import cors from "cors";
 import cookieParser from "cookie-parser";
 import authRoutes from "./routes/auth.routes.js";
 import fileRoutes from "./routes/file.routes.js";
+import userRoutes from "./routes/user.routes.js";
 import { globalErrorHandler } from "./middleware/error.middleware.js";
 import AppError from "./utils/AppError.js";
 
@@ -22,6 +23,8 @@ app.use(express.urlencoded({ extended: true }));
 
 app.use("/api/auth", authRoutes);
 app.use("/api/files", fileRoutes);
+app.use("/api/user", userRoutes);
+app.use("/api/users", userRoutes);
 
 app.get("/", (_req: Request, res: Response) => {
   res.status(200).json({

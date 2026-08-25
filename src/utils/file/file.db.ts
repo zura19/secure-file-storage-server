@@ -16,6 +16,8 @@ export interface GetUserFilesFilter {
   visibility?: Visibility;
   minSizeBytes?: number;
   maxSizeBytes?: number;
+  search?: string;
+  sortBySize?: "asc" | "desc";
 }
 
 export async function createFileRecord(data: CreateFileInput): Promise<File> {
@@ -51,6 +53,13 @@ export async function getUserFiles(
     where.visibility = filter.visibility;
   }
 
+  if (filter?.search) {
+    where.originalName = {
+      contains: filter.search,
+      mode: "insensitive",
+    };
+  }
+
   if (filter?.minSizeBytes !== undefined || filter?.maxSizeBytes !== undefined) {
     where.size = {};
     if (filter.minSizeBytes !== undefined) {
@@ -63,7 +72,9 @@ export async function getUserFiles(
 
   return prisma.file.findMany({
     where,
-    orderBy: { createdAt: "desc" },
+    orderBy: filter?.sortBySize
+      ? { size: filter.sortBySize }
+      : { createdAt: "desc" },
   });
 }
 

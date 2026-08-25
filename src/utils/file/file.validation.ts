@@ -7,8 +7,19 @@ export function validateGetMyFilesQuery(query: unknown): GetUserFilesFilter {
     return {};
   }
 
-  const { visibility, minSize, minSizeMB, min, maxSize, maxSizeMB, max } =
-    query as Record<string, unknown>;
+  const {
+    visibility,
+    minSize,
+    minSizeMB,
+    min,
+    maxSize,
+    maxSizeMB,
+    max,
+    search,
+    sortBySize,
+    sort,
+    order,
+  } = query as Record<string, unknown>;
 
   let targetVisibility: Visibility | undefined;
   if (visibility !== undefined && visibility !== "") {
@@ -71,10 +82,23 @@ export function validateGetMyFilesQuery(query: unknown): GetUserFilesFilter {
     );
   }
 
+  // Search filter (file name contains)
+  const searchFilter =
+    typeof search === "string" && search.trim() ? search.trim() : undefined;
+
+  // Sort by size (MBs)
+  let sortBySizeFilter: "asc" | "desc" | undefined;
+  const rawSort = sortBySize ?? sort ?? order;
+  if (rawSort && typeof rawSort === "string") {
+    sortBySizeFilter = rawSort.trim().toLowerCase() === "asc" ? "asc" : "desc";
+  }
+
   return {
     visibility: targetVisibility,
     minSizeBytes,
     maxSizeBytes,
+    search: searchFilter,
+    sortBySize: sortBySizeFilter,
   };
 }
 

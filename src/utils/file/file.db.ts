@@ -1,5 +1,5 @@
 import prisma from "../../lib/prisma.js";
-import { File, Visibility } from "@prisma/client";
+import { File, Prisma, Visibility } from "@prisma/client";
 
 export interface CreateFileInput {
   ownerId: string;
@@ -10,6 +10,12 @@ export interface CreateFileInput {
   size: number;
   visibility?: Visibility;
   shareToken?: string | null;
+}
+
+export interface GetUserFilesFilter {
+  visibility?: Visibility;
+  minSizeBytes?: number;
+  maxSizeBytes?: number;
 }
 
 export async function createFileRecord(data: CreateFileInput): Promise<File> {
@@ -33,9 +39,30 @@ export async function getFileById(id: string): Promise<File | null> {
   });
 }
 
-export async function getUserFiles(ownerId: string): Promise<File[]> {
+export async function getUserFiles(
+  ownerId: string,
+  filter?: GetUserFilesFilter,
+): Promise<File[]> {
+  const where: Prisma.FileWhereInput = {
+    ownerId,
+  };
+
+  if (filter?.visibility) {
+    where.visibility = filter.visibility;
+  }
+
+  if (filter?.minSizeBytes !== undefined || filter?.maxSizeBytes !== undefined) {
+    where.size = {};
+    if (filter.minSizeBytes !== undefined) {
+      where.size.gte = filter.minSizeBytes;
+    }
+    if (filter.maxSizeBytes !== undefined) {
+      where.size.lte = filter.maxSizeBytes;
+    }
+  }
+
   return prisma.file.findMany({
-    where: { ownerId },
+    where,
     orderBy: { createdAt: "desc" },
   });
 }

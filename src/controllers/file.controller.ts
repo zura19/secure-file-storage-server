@@ -9,6 +9,7 @@ import {
   deleteFileRecord,
   updateFileVisibility,
   getFileByShareToken,
+  validateGetMyFilesQuery,
 } from "../utils/file/index.js";
 import { deleteFromCloudinary } from "../config/cloudinary.js";
 import { Visibility } from "@prisma/client";
@@ -68,8 +69,9 @@ export async function getMyFiles(
     if (!userId) {
       return next(new AppError("User is not authenticated.", 401));
     }
+    const filters = validateGetMyFilesQuery(req.query);
 
-    const files = await getUserFiles(userId);
+    const files = await getUserFiles(userId, filters);
 
     res.status(200).json({
       status: "success",

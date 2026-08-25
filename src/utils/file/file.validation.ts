@@ -77,3 +77,37 @@ export function validateGetMyFilesQuery(query: unknown): GetUserFilesFilter {
     maxSizeBytes,
   };
 }
+
+export interface BulkDeleteInput {
+  ids: string[];
+}
+
+export function validateBulkDeleteInput(body: unknown): BulkDeleteInput {
+  if (!body || typeof body !== "object") {
+    throw new AppError("Request body is missing or invalid.", 400);
+  }
+
+  const { ids } = body as Record<string, unknown>;
+
+  if (!ids || !Array.isArray(ids) || ids.length === 0) {
+    throw new AppError("Please provide an array of file IDs to delete.", 400);
+  }
+
+  const validIds = ids
+    .filter(
+      (id): id is string => typeof id === "string" && id.trim().length > 0,
+    )
+    .map((id) => id.trim());
+
+  if (validIds.length === 0) {
+    throw new AppError(
+      "Please provide at least one valid file ID to delete.",
+      400,
+    );
+  }
+
+  const uniqueIds = Array.from(new Set(validIds));
+
+  return { ids: uniqueIds };
+}
+

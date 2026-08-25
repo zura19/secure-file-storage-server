@@ -10,6 +10,9 @@ import {
   updateFileVisibility,
   getFileByShareToken,
   validateGetMyFilesQuery,
+  validateBulkDeleteInput,
+  getFilesByIdsAndOwner,
+  deleteManyFileRecords,
 } from "../utils/file/index.js";
 import { deleteFromCloudinary } from "../config/cloudinary.js";
 import { Visibility } from "@prisma/client";
@@ -20,10 +23,24 @@ export async function uploadFile(
   next: NextFunction,
 ): Promise<void> {
   try {
-    const file = req.file as CloudinaryFile | undefined;
+    let uploadedFiles: CloudinaryFile[] = [];
 
-    if (!file || !file.cloudinary) {
-      return next(new AppError("Please provide a valid file to upload.", 400));
+    if (Array.isArray(req.files)) {
+      uploadedFiles = req.files as CloudinaryFile[];
+    } else if (req.files && typeof req.files === "object") {
+      uploadedFiles = Object.values(req.files).flat() as CloudinaryFile[];
+    } else if (req.file) {
+      uploadedFiles = [req.file as CloudinaryFile];
+    }
+
+    const validFiles = uploadedFiles.filter(
+      (file) => file && file.cloudinary && file.cloudinary.public_id,
+    );
+
+    if (validFiles.length === 0) {
+      return next(
+        new AppError("Please provide at least one valid file to upload.", 400),
+      );
     }
 
     const userId = req.user?.id;
@@ -31,27 +48,26 @@ export async function uploadFile(
       return next(new AppError("User is not authenticated.", 401));
     }
 
-    const { visibility } = req.body;
-    const isPublic = visibility === "PUBLIC";
-
-    const shareToken = isPublic ? crypto.randomBytes(16).toString("hex") : null;
-
-    const fileRecord = await createFileRecord({
-      ownerId: userId,
-      originalName: file.originalname,
-      cloudinaryId: file.cloudinary.public_id,
-      url: file.cloudinary.secure_url,
-      mimeType: file.mimetype,
-      size: file.cloudinary.bytes,
-      visibility: isPublic ? Visibility.PUBLIC : Visibility.PRIVATE,
-      shareToken,
-    });
+    const fileRecords = await Promise.all(
+      validFiles.map((file) =>
+        createFileRecord({
+          ownerId: userId,
+          originalName: file.originalname,
+          cloudinaryId: file.cloudinary!.public_id,
+          url: file.cloudinary!.secure_url,
+          mimeType: file.mimetype,
+          size: file.cloudinary!.bytes,
+          visibility: Visibility.PRIVATE,
+          shareToken: null,
+        }),
+      ),
+    );
 
     res.status(201).json({
       status: "success",
-      message: "File uploaded successfully.",
+      message: `${fileRecords.length} file(s) uploaded successfully.`,
       data: {
-        file: fileRecord,
+        files: fileRecords,
       },
     });
   } catch (error) {
@@ -265,3 +281,55 @@ export async function deleteFile(
     return next(error);
   }
 }
+
+export async function deleteManyFiles(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
+  try {
+    const userId = req.user?.id;
+    if (!userId) {
+      return next(new AppError("User is not authenticated.", 401));
+    }
+
+    const { ids } = validateBulkDeleteInput(req.body);
+
+    const files = await getFilesByIdsAndOwner(ids, userId);
+
+    if (files.length === 0) {
+      return next(
+        new AppError("No matching files found or access denied.", 404),
+      );
+    }
+
+    // Delete assets from Cloudinary in parallel
+    await Promise.allSettled(
+      files.map((file) =>
+        deleteFromCloudinary(file.cloudinaryId, file.mimeType).catch(
+          (cloudinaryError) => {
+            console.error(
+              `Cloudinary deletion error for ${file.cloudinaryId}:`,
+              cloudinaryError,
+            );
+          },
+        ),
+      ),
+    );
+
+    const matchedIds = files.map((f) => f.id);
+    const deleteResult = await deleteManyFileRecords(matchedIds, userId);
+
+    res.status(200).json({
+      status: "success",
+      message: `${deleteResult.count} file(s) deleted successfully.`,
+      data: {
+        deletedCount: deleteResult.count,
+        deletedIds: matchedIds,
+      },
+    });
+  } catch (error) {
+    return next(error);
+  }
+}
+

@@ -30,10 +30,7 @@ export const checkFileSizeHeader = (
   if (contentLength && parseInt(contentLength, 10) > MAX_FILE_SIZE) {
     const maxMb = process.env.MAX_FILE_SIZE_MB || "100";
     return next(
-      new AppError(
-        `File size exceeds the allowed limit of ${maxMb}MB.`,
-        400,
-      ),
+      new AppError(`File size exceeds the allowed limit of ${maxMb}MB.`, 400),
     );
   }
   next();
@@ -88,10 +85,13 @@ class CloudinaryStreamingStorage implements StorageEngine {
 
 export const cloudinaryStreamingStorage = new CloudinaryStreamingStorage();
 
-export const uploadSingleFile = multer({
+export const uploadFiles = multer({
   storage: cloudinaryStreamingStorage,
   limits: {
     fileSize: MAX_FILE_SIZE,
+    files: 10,
   },
   fileFilter,
-}).single("file");
+}).any();
+
+export const uploadSingleFile = uploadFiles;

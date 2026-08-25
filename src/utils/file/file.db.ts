@@ -144,3 +144,28 @@ export async function getFileByShareToken(shareToken: string) {
     },
   });
 }
+
+export async function getFilesByIdsAndOwner(
+  ids: string[],
+  ownerId: string,
+): Promise<File[]> {
+  return prisma.file.findMany({
+    where: {
+      id: { in: ids },
+      ownerId,
+    },
+  });
+}
+
+export async function deleteManyFileRecords(
+  ids: string[],
+  ownerId: string,
+): Promise<{ count: number }> {
+  return prisma.file.deleteMany({
+    where: {
+      id: { in: ids },
+      ownerId,
+    },
+  });
+}
+

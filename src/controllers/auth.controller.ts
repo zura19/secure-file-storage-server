@@ -38,6 +38,13 @@ export async function register(
       username,
     });
 
+    const token = generateToken({
+      userId: newUser.id,
+      email: newUser.email,
+    });
+
+    setAuthCookie(res, token);
+
     res.status(201).json({
       status: "success",
       message: "User registered successfully.",

@@ -88,3 +88,14 @@ export async function getUserFileStats(userId: string): Promise<UserStats> {
   };
 }
 
+export async function getUserTotalFileSize(userId: string): Promise<number> {
+  const aggregate = await prisma.file.aggregate({
+    where: { ownerId: userId },
+    _sum: {
+      size: true,
+    },
+  });
+
+  return aggregate._sum.size ?? 0;
+}
+

@@ -12,6 +12,7 @@ import { protect } from "../middleware/auth.middleware.js";
 import {
   uploadFiles,
   checkFileSizeHeader,
+  checkUserStorageQuota,
 } from "../middleware/upload.middleware.js";
 
 const router = Router();
@@ -19,7 +20,13 @@ const router = Router();
 router.get("/share/:shareToken", getSharedFile);
 
 router.use(protect);
-router.post("/upload", checkFileSizeHeader, uploadFiles, uploadFile);
+router.post(
+  "/upload",
+  checkFileSizeHeader,
+  checkUserStorageQuota,
+  uploadFiles,
+  uploadFile,
+);
 router.get("/", getMyFiles);
 router.delete("/many", deleteManyFiles);
 router.get("/:id", getFile);

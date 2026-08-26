@@ -1,7 +1,11 @@
 import { Request, Response, NextFunction } from "express";
 import crypto from "crypto";
 import AppError from "../utils/AppError.js";
-import { CloudinaryFile } from "../middleware/upload.middleware.js";
+import {
+  CloudinaryFile,
+  MAX_USER_STORAGE_BYTES,
+  MAX_USER_STORAGE_GB,
+} from "../middleware/upload.middleware.js";
 import {
   createFileRecord,
   getFileById,
@@ -14,6 +18,7 @@ import {
   getFilesByIdsAndOwner,
   deleteManyFileRecords,
 } from "../utils/file/index.js";
+import { getUserTotalFileSize } from "../utils/user/index.js";
 import { deleteFromCloudinary } from "../config/cloudinary.js";
 import { Visibility } from "@prisma/client";
 
@@ -46,6 +51,27 @@ export async function uploadFile(
     const userId = req.user?.id;
     if (!userId) {
       return next(new AppError("User is not authenticated.", 401));
+    }
+
+    const currentTotalSize = await getUserTotalFileSize(userId);
+    const incomingBytes = validFiles.reduce(
+      (sum, file) => sum + (file.cloudinary?.bytes || file.size || 0),
+      0,
+    );
+
+    if (currentTotalSize + incomingBytes > MAX_USER_STORAGE_BYTES) {
+      await Promise.allSettled(
+        validFiles.map((file) =>
+          deleteFromCloudinary(file.cloudinary!.public_id, file.mimetype),
+        ),
+      );
+
+      return next(
+        new AppError(
+          `Uploading these files exceeds your ${MAX_USER_STORAGE_GB}GB storage limit. Current storage used: ${(currentTotalSize / (1024 * 1024)).toFixed(2)}MB.`,
+          400,
+        ),
+      );
     }
 
     const fileRecords = await Promise.all(

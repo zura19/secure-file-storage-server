@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import AppError from "../utils/AppError.js";
 import { getUserFileStats } from "../utils/user/index.js";
+import { MAX_USER_STORAGE_BYTES } from "../middleware/upload.middleware.js";
 
 export async function getUserStats(
   req: Request,
@@ -16,10 +17,24 @@ export async function getUserStats(
 
     const stats = await getUserFileStats(userId);
 
+    const maxSizeBytes = MAX_USER_STORAGE_BYTES;
+    const remainingSizeBytes = Math.max(
+      0,
+      maxSizeBytes - stats.totalSizeBytes,
+    );
+    const usedPercentage = Number(
+      ((stats.totalSizeBytes / maxSizeBytes) * 100).toFixed(2),
+    );
+
     res.status(200).json({
       status: "success",
       data: {
-        stats,
+        stats: {
+          ...stats,
+          maxSizeBytes,
+          remainingSizeBytes,
+          usedPercentage,
+        },
       },
     });
   } catch (error) {

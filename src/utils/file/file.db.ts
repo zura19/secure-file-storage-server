@@ -3,6 +3,7 @@ import { File, Prisma, Visibility } from "@prisma/client";
 
 export interface CreateFileInput {
   ownerId: string;
+  folderId: string;
   originalName: string;
   cloudinaryId: string;
   url: string;
@@ -13,9 +14,8 @@ export interface CreateFileInput {
 }
 
 export interface GetUserFilesFilter {
+  folderId?: string;
   visibility?: Visibility;
-  minSizeBytes?: number;
-  maxSizeBytes?: number;
   search?: string;
   sortBySize?: "asc" | "desc";
 }
@@ -24,6 +24,7 @@ export async function createFileRecord(data: CreateFileInput): Promise<File> {
   return prisma.file.create({
     data: {
       ownerId: data.ownerId,
+      folderId: data.folderId,
       originalName: data.originalName,
       cloudinaryId: data.cloudinaryId,
       url: data.url,
@@ -49,6 +50,10 @@ export async function getUserFiles(
     ownerId,
   };
 
+  if (filter?.folderId) {
+    where.folderId = filter.folderId;
+  }
+
   if (filter?.visibility) {
     where.visibility = filter.visibility;
   }
@@ -58,16 +63,6 @@ export async function getUserFiles(
       contains: filter.search,
       mode: "insensitive",
     };
-  }
-
-  if (filter?.minSizeBytes !== undefined || filter?.maxSizeBytes !== undefined) {
-    where.size = {};
-    if (filter.minSizeBytes !== undefined) {
-      where.size.gte = filter.minSizeBytes;
-    }
-    if (filter.maxSizeBytes !== undefined) {
-      where.size.lte = filter.maxSizeBytes;
-    }
   }
 
   return prisma.file.findMany({

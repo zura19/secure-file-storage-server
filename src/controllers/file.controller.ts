@@ -19,6 +19,7 @@ import {
   deleteManyFileRecords,
 } from "../utils/file/index.js";
 import { getUserTotalFileSize } from "../utils/user/index.js";
+import { getFolderById as getFolderRecordById } from "../utils/folder/index.js";
 import { deleteFromCloudinary } from "../config/cloudinary.js";
 import { Visibility } from "@prisma/client";
 
@@ -50,7 +51,40 @@ export async function uploadFile(
 
     const userId = req.user?.id;
     if (!userId) {
+      await Promise.allSettled(
+        validFiles.map((file) =>
+          deleteFromCloudinary(file.cloudinary!.public_id, file.mimetype),
+        ),
+      );
       return next(new AppError("User is not authenticated.", 401));
+    }
+
+    const rawFolderId = req.body?.folderId ?? req.query?.folderId;
+    if (
+      !rawFolderId ||
+      typeof rawFolderId !== "string" ||
+      rawFolderId.trim().length === 0
+    ) {
+      await Promise.allSettled(
+        validFiles.map((file) =>
+          deleteFromCloudinary(file.cloudinary!.public_id, file.mimetype),
+        ),
+      );
+      return next(
+        new AppError("Folder ID is required for uploading files.", 400),
+      );
+    }
+
+    const folderId = rawFolderId.trim();
+
+    const targetFolder = await getFolderRecordById(folderId, userId);
+    if (!targetFolder) {
+      await Promise.allSettled(
+        validFiles.map((file) =>
+          deleteFromCloudinary(file.cloudinary!.public_id, file.mimetype),
+        ),
+      );
+      return next(new AppError("Folder not found or access denied.", 404));
     }
 
     const currentTotalSize = await getUserTotalFileSize(userId);
@@ -78,6 +112,7 @@ export async function uploadFile(
       validFiles.map((file) =>
         createFileRecord({
           ownerId: userId,
+          folderId: targetFolder.id,
           originalName: file.originalname,
           cloudinaryId: file.cloudinary!.public_id,
           url: file.cloudinary!.secure_url,

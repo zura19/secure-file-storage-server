@@ -8,18 +8,18 @@ export function validateGetMyFilesQuery(query: unknown): GetUserFilesFilter {
   }
 
   const {
+    folderId,
     visibility,
-    minSize,
-    minSizeMB,
-    min,
-    maxSize,
-    maxSizeMB,
-    max,
     search,
     sortBySize,
     sort,
     order,
   } = query as Record<string, unknown>;
+
+  const folderIdFilter =
+    typeof folderId === "string" && folderId.trim()
+      ? folderId.trim()
+      : undefined;
 
   let targetVisibility: Visibility | undefined;
   if (visibility !== undefined && visibility !== "") {
@@ -43,50 +43,11 @@ export function validateGetMyFilesQuery(query: unknown): GetUserFilesFilter {
     }
   }
 
-  const minSizeQuery = minSize ?? minSizeMB ?? min;
-  const maxSizeQuery = maxSize ?? maxSizeMB ?? max;
-
-  let minSizeBytes: number | undefined;
-  let maxSizeBytes: number | undefined;
-
-  if (minSizeQuery !== undefined && minSizeQuery !== "") {
-    const minMB = Number(minSizeQuery);
-    if (isNaN(minMB) || minMB < 0) {
-      throw new AppError(
-        "Minimum file size must be a valid non-negative number in MB.",
-        400,
-      );
-    }
-    minSizeBytes = Math.round(minMB * 1024 * 1024);
-  }
-
-  if (maxSizeQuery !== undefined && maxSizeQuery !== "") {
-    const maxMB = Number(maxSizeQuery);
-    if (isNaN(maxMB) || maxMB < 0) {
-      throw new AppError(
-        "Maximum file size must be a valid non-negative number in MB.",
-        400,
-      );
-    }
-    maxSizeBytes = Math.round(maxMB * 1024 * 1024);
-  }
-
-  if (
-    minSizeBytes !== undefined &&
-    maxSizeBytes !== undefined &&
-    minSizeBytes > maxSizeBytes
-  ) {
-    throw new AppError(
-      "Minimum file size cannot be greater than maximum file size.",
-      400,
-    );
-  }
-
   // Search filter (file name contains)
   const searchFilter =
     typeof search === "string" && search.trim() ? search.trim() : undefined;
 
-  // Sort by size (MBs)
+  // Sort by size
   let sortBySizeFilter: "asc" | "desc" | undefined;
   const rawSort = sortBySize ?? sort ?? order;
   if (rawSort && typeof rawSort === "string") {
@@ -94,9 +55,8 @@ export function validateGetMyFilesQuery(query: unknown): GetUserFilesFilter {
   }
 
   return {
+    folderId: folderIdFilter,
     visibility: targetVisibility,
-    minSizeBytes,
-    maxSizeBytes,
     search: searchFilter,
     sortBySize: sortBySizeFilter,
   };
